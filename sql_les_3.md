@@ -1,3 +1,4 @@
+#  ОБЪЕДИНЕНИЕ ТАБЛИЦ – JOIN
 ## Таблицы для задач  
 
   **installs** — содержит данные об установках приложения по дням.  
@@ -36,71 +37,24 @@ ____________________
 
 ![image](https://github.com/darina6688/SQL/assets/152012358/32b0c855-f661-4406-86f7-51f3810f5520)
 _____________________
-SELECT 
-    Source,
-    SUM(Rub), 
-    min(Rub),
-    max(Rub),
-    avg(Rub)   
-FROM 
-    checks c   
-    JOIN devices d ON c.UserID = d.UserID  
-    JOIN installs i ON d.DeviceID = i.DeviceID    
-GROUP BY Source
-ORDER BY Source
-LIMIT 50 
+*Самое время посмотреть на общую выручку, а также минимальный, максимальный и средний чек*   
+
+![image](https://github.com/darina6688/SQL/assets/152012358/6d75492a-9821-4926-84f2-ec6fccd28a99)
 _______________________
-*task*
+*Выведите идентификаторы устройств пользователей, которые совершили как минимум одну покупку за последний месяц (октябрь 2019). Используйте сортировку по возрастанию DeviceID и укажите минимальное значение. Hint: для извлечения месяца из даты можно использовать toMonth() или  toStartOfMonth(), предварительно приведя BuyDate к типу date.*
 
-SELECT  count(distinct UserID)
-FROM  default.checks c
-      JOIN default.devices d ON c.UserID = d.UserID 
-      JOIN test.installs i ON d.DeviceID = i.DeviceID
-WHERE Source = 'Source7' 
-GROUP BY Source
-LIMIT 10
-
-_________________________
-*task*
-
-SELECT 
-    DeviceID    
-FROM checks c   
-     JOIN devices d ON c.UserID = d.UserID   
-WHERE toStartOfMonth(CAST(BuyDate as date)) = '2019-10-01' 
-ORDER BY DeviceID 
-LIMIT 10
-
+![image](https://github.com/darina6688/SQL/assets/152012358/d1ab7d90-1ff2-4394-813d-b8c2e8be2aa2)
 _______________________
-*task*
+*Проверим, сколько товаров (events) в среднем просматривают пользователи с разных платформ (Platform), и пришедшие из разных источников  (Source). Для этого объедините таблицы events и installs, и посчитайте, сколько просмотров в среднем приходится на каждую пару платформа-канал привлечения. Отсортируйте полученную табличку по убыванию среднего числа просмотров. В качестве ответа укажите платформу и источник, пользователи которого в среднем просматривали товары бóльшее число раз.*
 
-SELECT 
-    AppPlatform,
-    Source,
-    avg(events) as avg_events
-FROM events    
-     JOIN installs using (DeviceID)
-GROUP BY AppPlatform, Source
-ORDER BY avg_events DESC 
-LIMIT 10 
-
+![image](https://github.com/darina6688/SQL/assets/152012358/554d8315-ff64-41b1-a2bb-46b8e61c6dc7)
 _____________________________
-*task*
+*Давайте посчитаем число уникальных DeviceID в инсталлах, для которых присутствуют просмотры в таблице events с разбивкой по платформам (поле Platform). Для этого можно отобрать все строки только из таблицы installs, для которых нашлось соответствие в таблице events. В качестве ответа введите число инсталлов, для которых нашлись просмотры, на платформе android.
+Внимание! "Нашлось 0 просмотров" тоже считается как "нашлись просмотры". Главное, чтобы не было именно пропуска.*
 
-SELECT Platform,
-     count(Distinct DeviceID)
-FROM installs
-     LEFT SEMI JOIN events using (DeviceID)
-GROUP BY Platform
-LIMIT 10 
-
+![image](https://github.com/darina6688/SQL/assets/152012358/75049b27-0815-4bf3-99ff-ec83637c3172)
 _________________________________
-*task*
+*Давайте теперь посчитаем конверсию из инсталла в просмотр с разбивкой по платформе инсталла – в данном случае это доля DeviceID, для которых есть просмотры, от всех DeviceID в инсталлах. Для этого нужно объединить таблицы installs и events так, чтобы получить все DeviceID инсталлов и соответствующие им DeviceID из events, посчитать число уникальных DeviceID инсталлов (1) и соответствующих DeviceID из events (2) и вычислить долю (2) от (1). В качестве ответа укажите значение конверсии из инсталла в просмотр на платформе ios.*
 
-SELECT Platform,
-       count(Distinct ev.DeviceID)/count(Distinct i.DeviceID)
-FROM installs i 
-     LEFT JOIN events ev ON i.DeviceID=ev.DeviceID 
-GROUP BY Platform
-
+![image](https://github.com/darina6688/SQL/assets/152012358/d60698ac-82cd-4360-b367-66d738a9a1e7)
 ___________________________
