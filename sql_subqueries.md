@@ -121,30 +121,34 @@ __________
 NB! Для простоты будем считать, что отзыв — это уникальный посетитель на уникальное жилье, не учитывая возможные повторные отзывы от того же посетителя.  
 Для этого с помощью конструкции WITH посчитайте среднее число уникальных reviewer_id из таблицы reviews на каждое жильё, потом проведите джойн таблиц calendar_summary и reviews по полю listing_id (при этом из таблицы calendar_summary должны быть отобраны уникальные listing_id, отфильтрованные по правилу available='t'). Результат отфильтруйте так, чтобы остались только записи, у которых число отзывов от уникальных людей выше среднего. Отсортируйте результат по возрастанию listing_id
 
-?```sql
-WITH (SELECT AVG(COUNT(DISTINCT reviewer_id))
-      FROM reviews
-      GROUP BY listing_id)  as avg_rev
-      
+```sql
+WITH (SELECT AVG(count_rev) 
+      FROM  (SELECT
+                COUNT(DISTINCT reviewer_id) AS count_rev
+             FROM reviews
+             GROUP BY listing_id)
+        ) as avg_rev
+
 SELECT 
     listing_id,
-    COUNT(reviewer_id)  as cnt_rev 
+    count_rev
 FROM 
-    (SELECT    
-    	listing_id,
-    	COUNT(reviewer_id)
-    FROM calendar_summary    
-    WHERE available='t'     
+    (
+    SELECT  
+        listing_id, 
+        COUNT(DISTINCT(reviewer_id)) as count_rev   
+    FROM reviews    
     GROUP BY listing_id
     HAVING COUNT(DISTINCT reviewer_id) > avg_rev
-    ) AS c
-JOIN 
-    (SELECT  
-        listing_id, 
-    	COUNT(DISTINCT(reviewer_id))    
-    FROM reviews    
-    GROUP BY listing_id    
-    ) AS r  
+    ) as r
+JOIN
+    (
+    SELECT    
+        DISTINCT listing_id
+    FROM calendar_summary    
+    WHERE available='t'
+    ) as c
+    
 ON c.listing_id = r.listing_id
 ORDER BY listing_id
 ```
