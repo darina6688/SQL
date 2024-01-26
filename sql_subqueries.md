@@ -121,29 +121,32 @@ __________
 NB! Для простоты будем считать, что отзыв — это уникальный посетитель на уникальное жилье, не учитывая возможные повторные отзывы от того же посетителя.  
 Для этого с помощью конструкции WITH посчитайте среднее число уникальных reviewer_id из таблицы reviews на каждое жильё, потом проведите джойн таблиц calendar_summary и reviews по полю listing_id (при этом из таблицы calendar_summary должны быть отобраны уникальные listing_id, отфильтрованные по правилу available='t'). Результат отфильтруйте так, чтобы остались только записи, у которых число отзывов от уникальных людей выше среднего. Отсортируйте результат по возрастанию listing_id
 
-```sql
-SELECT
-listing_id,
-cnt_rev
-FROM (
-    SELECT   
-    	COUNT(DISTINCT(reviewer_id)) cnt_rev,        
-    	listing_id        
-    FROM reviews    
-    GROUP BY listing_id    
-    ) AS r    
-JOIN (
-    SELECT    
-    	listing_id        
+?```sql
+WITH (SELECT AVG(COUNT(DISTINCT reviewer_id))
+      FROM reviews
+      GROUP BY listing_id)  as avg_rev
+      
+SELECT 
+    listing_id,
+    COUNT(reviewer_id)  as cnt_rev 
+FROM 
+    (SELECT    
+    	listing_id,
+    	COUNT(reviewer_id)
     FROM calendar_summary    
     WHERE available='t'     
-GROUP BY listing_id
-    ) AS c    
-ON
-    c.listing_id = r.listing_id    
-WHERE cnt_rev > avg_review  
+    GROUP BY listing_id
+    HAVING COUNT(DISTINCT reviewer_id) > avg_rev
+    ) AS c
+JOIN 
+    (SELECT  
+        listing_id, 
+    	COUNT(DISTINCT(reviewer_id))    
+    FROM reviews    
+    GROUP BY listing_id    
+    ) AS r  
+ON c.listing_id = r.listing_id
 ORDER BY listing_id
-LIMIT 10
 ```
 __________
 Используйте таблицу checks и разделите всех покупателей на сегменты:  
@@ -166,7 +169,7 @@ SELECT
     END AS segment    
 FROM checks
 GROUP BY UserID
-ORDER BY UserID ASC
+ORDER BY UserID
 ```
 __________
 *Используйте предыдущий запрос как подзапрос и посчитайте, сколько клиентов приходится на каждый сегмент и сколько доходов он приносит. Отсортируйте результат по убыванию суммы доходов на сегмент и в качестве ответа укажите наибольшую сумму.*
@@ -175,25 +178,24 @@ __________
 SELECT
     segment,    
     COUNT(DISTINCT UserID),    
-    sum(Rub) as Revenue    
+    sum(Rub)    
 FROM
     checks   
 JOIN
-    (    
-    SELECT    
-    UserID,    
-    CASE    
-        WHEN avg(Rub) < 5 THEN 'A'        
-        WHEN avg(Rub) >= 5 AND avg(Rub) < 10 THEN 'B'        
-        WHEN avg(Rub) >= 10 AND avg(Rub) < 20 THEN 'C'       
-        ELSE 'D'       
-    END AS segment    
+    (SELECT    
+        UserID,    
+        CASE    
+            WHEN avg(Rub) < 5 THEN 'A'        
+            WHEN avg(Rub) >= 5 AND avg(Rub) < 10 THEN 'B'        
+            WHEN avg(Rub) >= 10 AND avg(Rub) < 20 THEN 'C'       
+            ELSE 'D'       
+        END AS segment    
     FROM checks    
     GROUP BY UserID    
-    ) as sub    
+    ) as user_segm    
 USING (UserID)
 GROUP BY segment
-ORDER BY Revenue DESC
+ORDER BY sum(Rub) DESC
 ```
 __________
 Вернемся к таблице AirBnb. Предположим, что в выборе жилья нас интересует только два параметра: наличие кухни (kitchen) и гибкой системы отмены (flexible), причем первый в приоритете.  
@@ -208,15 +210,13 @@ __________
 ```sql
 SELECT 
     host_id,    
-CASE
-    WHEN multiSearchAnyCaseInsensitive(amenities, ['kitchen'])!=0 AND cancellation_policy = 'flexible' THEN 'good'   
-    WHEN multiSearchAnyCaseInsensitive(amenities, ['kitchen'])!=0 AND cancellation_policy != 'flexible' THEN 'ok'    
-ELSE 'not ok'
-END my_group
-FROM 
-    listings    
-ORDER BY 
-    my_group
+    CASE
+        WHEN multiSearchAnyCaseInsensitive(amenities, ['kitchen'])!=0 AND cancellation_policy = 'flexible' THEN 'good'   
+        WHEN multiSearchAnyCaseInsensitive(amenities, ['kitchen'])!=0 AND cancellation_policy != 'flexible' THEN 'ok'    
+    ELSE 'not ok'
+    END as qual_group
+FROM listings    
+ORDER BY qual_group
 ```
 __________
 
